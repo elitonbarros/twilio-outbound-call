@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Twilio Outbound Call</title>
+  <script src="https://sdk.twilio.com/js/client/v1.13/twilio.min.js"></script>
+</head>
+<body>
+  <h2>Make a Call from your Twilio Number</h2>
+  <input type="text" id="phoneNumber" placeholder="+551150281973" />
+  <button onclick="makeCall()">Call Now</button>
+
+  <script>
+    let device;
+
+    fetch('/token')
+      .then(response => response.text())
+      .then(token => {
+        device = new Twilio.Device(token, {
+          codecPreferences: ['opus', 'pcmu'],
+          fakeLocalDTMF: true,
+          enableRingingState: true
+        });
+
+        device.on('ready', () => console.log('Device Ready'));
+        device.on('error', error => console.error('Device Error:', error));
+      });
+
+    function makeCall() {
+      const number = document.getElementById('phoneNumber').value;
+      device.connect({ To: number });
+    }
+  </script>
+</body>
+</html>
