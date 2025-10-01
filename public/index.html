@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8" />
   <title>Twilio Outbound Call</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -8,124 +9,41 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon.png">
-  <script src="https://sdk.twilio.com/js/client/v1.13/twilio.min.js"></script>
+  <!-- Voice JS SDK v2 -->
+  <script src="https://sdk.twilio.com/js/client/v2.0/twilio.min.js"></script>
   <style>
-    html, body {
-      touch-action: manipulation;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
+    html, body { touch-action: manipulation; }
+    * { box-sizing: border-box; }
     body {
-      margin: 0;
-      padding: 0;
-      background-color: #f9f9f9;
-      font-family: 'Segoe UI', sans-serif;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+      margin: 0; padding: 0; background: #f9f9f9; font-family: 'Segoe UI', sans-serif;
+      display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh;
     }
-
-    h2 {
-      font-size: 24px;
-      margin-bottom: 10px;
-    }
-
+    h2 { font-size: 24px; margin-bottom: 10px; }
     #phoneNumber {
-      font-size: 28px;
-      padding: 15px;
-      margin-bottom: 20px;
-      width: 90%;
-      max-width: 320px;
-      text-align: center;
-      border: 2px solid #ccc;
-      border-radius: 12px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      font-size: 28px; padding: 15px; margin-bottom: 20px; width: 90%; max-width: 320px; text-align: center;
+      border: 2px solid #ccc; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,.1); background: #fff;
     }
-
-    .dial-pad {
-      display: grid;
-      grid-template-columns: repeat(3, 80px);
-      gap: 15px;
-      justify-content: center;
-      margin-bottom: 20px;
-    }
-
+    .dial-pad { display: grid; grid-template-columns: repeat(3, 80px); gap: 15px; justify-content: center; margin-bottom: 20px; }
     .dial-pad button {
-      font-size: 22px;
-      padding: 20px;
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      border: none;
-      background-color: #f0f0f0;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-      cursor: pointer;
+      font-size: 22px; padding: 20px; width: 80px; height: 80px; border-radius: 50%; border: none; background: #f0f0f0;
+      box-shadow: 0 2px 5px rgba(0,0,0,.2); cursor: pointer;
     }
-
-    .dial-pad button small {
-      display: block;
-      font-size: 12px;
-      color: #888;
-    }
-
-    .dial-pad button:hover {
-      background-color: #ddd;
-    }
-
-    .delete-btn {
-      margin-top: 10px;
-      margin-bottom: 20px;
-      font-size: 16px;
-      padding: 10px 20px;
-      border-radius: 12px;
-    }
-
-    .actions {
-      display: flex;
-      gap: 20px;
-    }
-
-    .call-btn, .hangup-btn {
-      font-size: 18px;
-      padding: 12px 28px;
-      border-radius: 30px;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-
-    .call-btn {
-      background-color: green;
-    }
-
-    .hangup-btn {
-      background-color: red;
-    }
-
+    .dial-pad button small { display: block; font-size: 12px; color: #888; }
+    .dial-pad button:hover { background: #ddd; }
+    .delete-btn { margin-top: 10px; margin-bottom: 20px; font-size: 16px; padding: 10px 20px; border-radius: 12px; }
+    .actions { display: flex; gap: 20px; }
+    .call-btn, .hangup-btn { font-size: 18px; padding: 12px 28px; border-radius: 30px; color: #fff; border: none; cursor: pointer; }
+    .call-btn { background: green; }
+    .hangup-btn { background: red; }
     @media (max-width: 500px) {
-      .dial-pad {
-        grid-template-columns: repeat(3, 70px);
-        gap: 10px;
-      }
-
-      .dial-pad button {
-        width: 70px;
-        height: 70px;
-      }
+      .dial-pad { grid-template-columns: repeat(3, 70px); gap: 10px; }
+      .dial-pad button { width: 70px; height: 70px; }
     }
   </style>
 </head>
 <body>
-
   <h2>📱 Eliton's Phone</h2>
-
   <input type="text" id="phoneNumber" placeholder="+1..." />
-
   <div class="dial-pad">
     <button onclick="appendNumber('1')">1</button>
     <button onclick="appendNumber('2')">2<br><small>ABC</small></button>
@@ -140,43 +58,70 @@
     <button onclick="appendNumber('0')">0</button>
     <button onclick="appendNumber('#')">#</button>
   </div>
-
   <button class="delete-btn" onclick="deleteLast()">⌫ Delete</button>
-
   <div class="actions">
     <button class="call-btn" onclick="makeCall()">📞 Call</button>
     <button class="hangup-btn" onclick="hangUp()">🔴 Hang Up</button>
   </div>
 
   <script>
+    // Ask for mic early to avoid muted connection
+    (async () => {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log('🎤 Mic permission granted');
+      } catch (e) {
+        console.error('❌ Mic permission denied:', e);
+      }
+    })();
+
+    let device;
+
+    // Fetch token and set up the Device
     fetch('/token')
-      .then(response => response.text())
+      .then(r => r.text())
       .then(token => {
-        Twilio.Device.setup(token);
-        Twilio.Device.ready(() => console.log("🎉 Device ready!"));
-        Twilio.Device.error(error => console.error("❌ Device error:", error.message));
+        device = new Twilio.Device(token, {
+          codecPreferences: ['opus', 'pcmu'],
+          debug: true
+        });
+
+        try { device.audio.speakerDevices.set('speaker'); } catch {}
+
+        device.on('ready', () => console.log('🎉 Device ready!'));
+        device.on('error', err => console.error('❌ Device error:', err));
+        device.on('incoming', conn => { console.log('📥 Incoming'); conn.accept(); });
+        device.on('connect', conn => console.log('✅ Connected', conn.parameters));
+        device.on('disconnect', () => console.log('🔚 Disconnected'));
+        device.on('cancel', () => console.log('☎️ Canceled'));
       });
 
     function appendNumber(digit) {
       const input = document.getElementById('phoneNumber');
       input.value += digit;
     }
-
     function deleteLast() {
       const input = document.getElementById('phoneNumber');
       input.value = input.value.slice(0, -1);
     }
 
-    function makeCall() {
-      const phoneNumber = document.getElementById('phoneNumber').value;
-      console.log("📞 Calling", phoneNumber);
-      Twilio.Device.connect({ To: phoneNumber });
+    async function makeCall() {
+      const phoneNumber = document.getElementById('phoneNumber').value.trim();
+      if (!phoneNumber) return alert('Enter a phone number (E.164, e.g. +12145551234)');
+      try {
+        await device.connect({ params: { To: phoneNumber } });
+      } catch (e) {
+        console.error('❌ connect() failed:', e);
+      }
     }
 
     function hangUp() {
-      console.log("🛑 Hanging up...");
-      Twilio.Device.disconnectAll();
+      if (device) device.disconnectAll();
     }
+
+    // Expose for buttons (in case of strict scopes)
+    window.makeCall = makeCall;
+    window.hangUp = hangUp;
   </script>
 </body>
 </html>
