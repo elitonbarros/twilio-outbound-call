@@ -10,6 +10,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon.png">
   <!-- Voice JS SDK v2 -->
+  <!-- NEW (v2) -->
   <script src="https://sdk.twilio.com/js/client/v2.0/twilio.min.js"></script>
   <style>
     html, body { touch-action: manipulation; }
@@ -65,63 +66,68 @@
   </div>
 
   <script>
-    // Ask for mic early to avoid muted connection
-    (async () => {
-      try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-        console.log('🎤 Mic permission granted');
-      } catch (e) {
-        console.error('❌ Mic permission denied:', e);
-      }
-    })();
+  // Ask for mic early (so Chrome/iOS allow the AudioContext)
+  (async () => {
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('🎤 Mic permission granted');
+    } catch (e) {
+      console.error('❌ Mic permission denied:', e);
+    }
+  })();
 
-    let device;
+  let device;
 
-    // Fetch token and set up the Device
-    fetch('/token')
-      .then(r => r.text())
-      .then(token => {
-        device = new Twilio.Device(token, {
-          codecPreferences: ['opus', 'pcmu'],
-          debug: true
-        });
-
-        try { device.audio.speakerDevices.set('speaker'); } catch {}
-
-        device.on('ready', () => console.log('🎉 Device ready!'));
-        device.on('error', err => console.error('❌ Device error:', err));
-        device.on('incoming', conn => { console.log('📥 Incoming'); conn.accept(); });
-        device.on('connect', conn => console.log('✅ Connected', conn.parameters));
-        device.on('disconnect', () => console.log('🔚 Disconnected'));
-        device.on('cancel', () => console.log('☎️ Canceled'));
+  fetch('/token')
+    .then(r => r.text())
+    .then(token => {
+      // v2: instantiate Device (no setup())
+      device = new Twilio.Device(token, {
+        codecPreferences: ['opus', 'pcmu'],
+        debug: true
       });
 
-    function appendNumber(digit) {
-      const input = document.getElementById('phoneNumber');
-      input.value += digit;
-    }
-    function deleteLast() {
-      const input = document.getElementById('phoneNumber');
-      input.value = input.value.slice(0, -1);
-    }
+      // iOS/Chrome on mobile: prefer loudspeaker if available
+      try { device.audio.speakerDevices.set('speaker'); } catch {}
 
-    async function makeCall() {
-      const phoneNumber = document.getElementById('phoneNumber').value.trim();
-      if (!phoneNumber) return alert('Enter a phone number (E.164, e.g. +12145551234)');
-      try {
-        await device.connect({ params: { To: phoneNumber } });
-      } catch (e) {
-        console.error('❌ connect() failed:', e);
-      }
-    }
+      device.on('ready', () => console.log('🎉 Device ready!'));
+      device.on('error', err => console.error('❌ Device error:', err));
+      device.on('incoming', conn => { console.log('📥 Incoming'); conn.accept(); });
+      device.on('connect', conn => console.log('✅ Connected', conn.parameters));
+      device.on('disconnect', () => console.log('🔚 Disconnected'));
+      device.on('cancel', () => console.log('☎️ Canceled'));
+    });
 
-    function hangUp() {
-      if (device) device.disconnectAll();
-    }
+  // Keep your helpers
+  function appendNumber(d) {
+    const i = document.getElementById('phoneNumber');
+    i.value += d;
+  }
+  function deleteLast() {
+    const i = document.getElementById('phoneNumber');
+    i.value = i.value.slice(0, -1);
+  }
 
-    // Expose for buttons (in case of strict scopes)
-    window.makeCall = makeCall;
-    window.hangUp = hangUp;
-  </script>
+  // IMPORTANT: v2 uses device.connect({ params: {...} })
+  async function makeCall() {
+    const phone = document.getElementById('phoneNumber').value.trim();
+    if (!phone) return alert('Enter a phone number (E.164, e.g. +12145551234)');
+    // Ensure audio context is resumed after a user gesture
+    try { await device.audio._audioContext?.resume(); } catch {}
+    try {
+      await device.connect({ params: { To: phone } });
+    } catch (e) {
+      console.error('❌ connect() failed:', e);
+    }
+  }
+
+  function hangUp() {
+    if (device) device.disconnectAll();
+  }
+
+  // expose for buttons
+  window.makeCall = makeCall;
+  window.hangUp = hangUp;
+</script>
 </body>
 </html>
